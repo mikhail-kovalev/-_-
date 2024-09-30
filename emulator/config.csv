@@ -1,0 +1,2 @@
+username,path_to_filesystem,path_to_log
+user1,/path/to/virtual/filesystem.zip,/path/to/log.csv
