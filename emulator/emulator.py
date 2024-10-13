@@ -1,53 +1,59 @@
-import sys
-import csv
-import zipfile
-import os
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QTextEdit, QLineEdit, QLabel
+import tkinter as tk
+from tkinter import scrolledtext
+from shell_commands import shell_commands  # Импортируем вашу логику команд
 
-from filesystem import VirtualFileSystem
-from shell_commands import ShellCommands
+class ShellEmulatorApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Shell Emulator")
 
-class ShellEmulator(QWidget):
-    def __init__(self, config_file):
-        super().__init__()
-        self.initUI()
-        self.load_config(config_file)
-        self.commands = ShellCommands(self.fs, self.username, self.log_file)
+        # Настройка текстовой области для вывода результата команд
+        self.console = scrolledtext.ScrolledText(root, width=80, height=20, state='disabled')
+        self.console.grid(row=0, column=0, padx=10, pady=10)
 
-    def initUI(self):
-        self.layout = QVBoxLayout()
+        # Поле для ввода команд
+        self.command_entry = tk.Entry(root, width=80)
+        self.command_entry.grid(row=1, column=0, padx=10, pady=5)
+        self.command_entry.bind('<Return>', self.execute_command)  # Привязываем нажатие Enter к функции
 
-        self.prompt = QLabel('Shell > ')
-        self.layout.addWidget(self.prompt)
+        # Кнопка выполнения команд
+        self.execute_button = tk.Button(root, text="Execute", command=self.execute_command)
+        self.execute_button.grid(row=2, column=0, padx=10, pady=5)
 
-        self.console = QTextEdit()
-        self.console.setReadOnly(True)
-        self.layout.addWidget(self.console)
+    def execute_command(self, event=None):
+        # Получаем команду из поля ввода
+        command = self.command_entry.get()
 
-        self.input = QLineEdit()
-        self.input.returnPressed.connect(self.execute_command)
-        self.layout.addWidget(self.input)
+        # Добавляем команду в консоль
+        self._append_console(f"User@Shell: {command}")
 
-        self.setLayout(self.layout)
-        self.setWindowTitle('Shell Emulator')
-        self.show()
+        # Очищаем поле ввода
+        self.command_entry.delete(0, tk.END)
 
-    def execute_command(self):
-        command = self.input.text()
-        self.console.append(f"{self.username}@shell: {command}")
-        self.input.clear()
+        # Выполняем команду через функцию shell_commands
+        output = shell_commands(command, self.root)  # Передаем root в функцию shell_commands
 
-        # Обработка команды
-        output = self.commands.execute(command)
-        self.console.append(output)  # Вывод результата команды
+        # Отображаем результат выполнения команды в консоли
+        self._append_console(output)
 
-        # Логирование команды
-        with open(self.log_file, mode='a') as log:
-            writer = csv.writer(log)
-            writer.writerow([self.username, command])
+    def _append_console(self, text):
+        # Включаем возможность записи в текстовую область (по умолчанию она "disabled")
+        self.console['state'] = 'normal'
 
-if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    config_file = 'config.csv'  # путь к конфигурационному файлу
-    emulator = ShellEmulator(config_file)
-    sys.exit(app.exec_())
+        # Добавляем текст в консоль и прокручиваем вниз
+        self.console.insert(tk.END, text + "\n")
+        self.console.see(tk.END)
+
+        # Отключаем возможность редактирования текста пользователем
+        self.console['state'] = 'disabled'
+
+
+def exit_shell(root):
+    root.destroy()  # Закрывает главное окно
+
+
+# Основная функция для запуска приложения
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ShellEmulatorApp(root)
+    root.mainloop()
